@@ -1,9 +1,22 @@
 package service;
 
-import java.net.*;
-import java.io.*;
-import java.util.*;
-import java.text.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.URL;
+import java.net.URLConnection;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.StringTokenizer;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -32,6 +45,8 @@ public class MyCookieStore {
 
     private Map store;
 
+    private static final String FICHERO_NOMBRE = "hashmap.ser";
+
     private static final String SET_COOKIE = "Set-Cookie";
     private static final String COOKIE_VALUE_DELIMITER = ";";
     private static final String PATH = "path";
@@ -47,7 +62,7 @@ public class MyCookieStore {
 
     public MyCookieStore() {
 
-        store = new HashMap<>();
+        store = new HashMap();
         dateFormat = new SimpleDateFormat(DATE_FORMAT);
     }
 
@@ -67,15 +82,15 @@ public class MyCookieStore {
         // let's determine the domain from where these cookies are being sent
         String domain = getDomainFromHost(conn.getURL().getHost());
 
-        Map domainStore; // this is where we will store cookies for this domain
+        Map<String, Map> domainStore; // this is where we will store cookies for this domain
 
         // now let's check the store to see if we have an entry for this domain
         if (store.containsKey(domain)) {
             // we do, so lets retrieve it from the store
-            domainStore = (Map) store.get(domain);
+            domainStore = (Map<String, Map>) store.get(domain);
         } else {
             // we don't, so let's create it and put it in the store
-            domainStore = new HashMap();
+            domainStore = leerCookies();
             store.put(domain, domainStore);
         }
 
@@ -86,7 +101,6 @@ public class MyCookieStore {
                 Map cookie = new HashMap();
                 StringTokenizer st = new StringTokenizer(conn.getHeaderField(i), COOKIE_VALUE_DELIMITER);
 
-//                String[] arrayTokens =conn.getHeaderField(i).split(COOKIE_VALUE_DELIMITER);
                 // the specification dictates that the first name/value pair
                 // in the string is the cookie name and value, so let's handle
                 // them as a special case: 
@@ -100,18 +114,18 @@ public class MyCookieStore {
 
                 while (st.hasMoreTokens()) {
                     String token = st.nextToken();
-
                     try {
                         cookie.put(
-                                token.substring(token.indexOf(NAME_VALUE_SEPARATOR)),
-                                token.substring(token.indexOf(NAME_VALUE_SEPARATOR), token.length())
+                                token.substring(0, token.indexOf(NAME_VALUE_SEPARATOR)).toLowerCase(),
+                                token.substring(token.indexOf(NAME_VALUE_SEPARATOR) + 1, token.length())
                         );
-                    } catch (java.lang.StringIndexOutOfBoundsException e) {
-                        
+                    } catch (StringIndexOutOfBoundsException excep) {
+
                     }
                 }
             }
         }
+        guardarCookies(domainStore);
     }
 
     /**
@@ -129,10 +143,18 @@ public class MyCookieStore {
 
         // let's determine the domain and path to retrieve the appropriate cookies
         URL url = conn.getURL();
+
         String domain = getDomainFromHost(url.getHost());
         String path = url.getPath();
 
-        Map domainStore = (Map) store.get(domain);
+        Map domainStore;
+
+        if (existeFichero()) {
+            domainStore = (Map) leerCookies().get(domain);
+        } else {
+            domainStore = (Map) store.get(domain);
+        }
+
         if (domainStore == null) {
             return;
         }
@@ -178,7 +200,6 @@ public class MyCookieStore {
         try {
             return (now.compareTo(dateFormat.parse(cookieExpires))) <= 0;
         } catch (java.text.ParseException pe) {
-            pe.printStackTrace();
             return false;
         }
     }
@@ -197,7 +218,9 @@ public class MyCookieStore {
     }
 
     /**
-     * @return string representation of stored cookies organized by domain.
+     * Returns a string representation of stored cookies organized by domain.
+     *
+     * @return
      */
     @Override
     public String toString() {
@@ -214,8 +237,52 @@ public class MyCookieStore {
             System.out.println(cm);
             cm.setCookies(url.openConnection());
         } catch (IOException ioe) {
-            LOG.info("Liada: ".concat(ioe.getMessage()));
+            LOG.info("Hubo un error: ".concat(ioe.getMessage()));
         }
     }
 
+    private void guardarCookies(Map mapaGuardar) {
+
+        if (!existeFichero()) {
+            try (FileOutputStream fos = new FileOutputStream(FICHERO_NOMBRE, false);
+                    ObjectOutputStream oos = new ObjectOutputStream(fos)) {
+
+                oos.writeObject(mapaGuardar);
+                LOG.info("Objeto Serializado Con Éxito");
+
+            } catch (FileNotFoundException ex) {
+                LOG.log(Level.INFO, "Archivo No Encontrado, Raz\u00f3n {0}", ex.getMessage());
+            } catch (IOException ex) {
+                LOG.log(Level.INFO, "No se pudo escribir en el fichero, Raz\u00f3n {0}", ex.getMessage());
+            }
+        } else {
+            LOG.info("Ya existen unas cookies creadas");
+        }
+
+    }
+
+    private Map leerCookies() {
+
+        Map mapaCookies = null;
+
+        try (FileInputStream fos = new FileInputStream(FICHERO_NOMBRE);
+                ObjectInputStream ois = new ObjectInputStream(fos)) {
+
+            mapaCookies = (Map) ois.readObject();
+            LOG.info("Objeto Deserializado Con Éxito");
+        } catch (FileNotFoundException ex) {
+            LOG.info("Archivo No Encontrado, Razón ".concat(ex.getMessage()));
+        } catch (IOException ex) {
+            LOG.info("No se puede escribir en el fichero, Razón ".concat(ex.getMessage()));
+        } catch (ClassNotFoundException ex) {
+            LOG.info("Clase No Encontrada, Mas info: ".concat(ex.getMessage()));
+        }
+        return mapaCookies;
+    }
+
+    private boolean existeFichero() {
+        File ficheroVerificar = new File(FICHERO_NOMBRE);
+
+        return ficheroVerificar.exists();
+    }
 }

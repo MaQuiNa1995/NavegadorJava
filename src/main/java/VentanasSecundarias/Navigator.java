@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
 import java.io.IOException;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -17,9 +18,6 @@ import javafx.scene.web.WebView;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.Collection;
-import java.util.List;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 import static javafx.concurrent.Worker.State.FAILED;
 import javax.swing.BorderFactory;
@@ -46,6 +44,7 @@ public class Navigator extends JFrame {
     private JLabel estadoLabel;
     private JTextField direccion;
     private JProgressBar barraProgreso;
+    private static final String FICHERO_NOMBRE = "hashmap.ser";
 
     public void iniciarComponentes() {
         Platform.setImplicitExit(false);
@@ -54,10 +53,14 @@ public class Navigator extends JFrame {
 
         try {
             URL url = new URL("http://10.60.2.246:8888/serversso/login");
-            URLConnection conn = url.openConnection();
-            conn.connect();
-            cookieStore.storeCookies(conn);
-            System.out.println(cookieStore);
+
+            File e = new File(FICHERO_NOMBRE);
+            if (!e.exists()) {
+                URLConnection conn = url.openConnection();
+                conn.connect();
+                cookieStore.storeCookies(conn);
+//                System.out.println(cookieStore);
+            }
             cookieStore.setCookies(url.openConnection());
         } catch (IOException ioe) {
             LOG.info("Liada: ".concat(ioe.getMessage()));
