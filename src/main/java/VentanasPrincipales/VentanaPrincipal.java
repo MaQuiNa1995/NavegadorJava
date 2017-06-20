@@ -60,7 +60,7 @@ public final class VentanaPrincipal extends JFrame implements ActionListener {
 
                     browser.setVisible(true);
 
-                    browser.loadURL("https://mail.google.com/mail/u/0/#inbox");
+                    browser.loadURL("http://10.60.2.246:8888/serversso/login");
                 });
 
                 break;

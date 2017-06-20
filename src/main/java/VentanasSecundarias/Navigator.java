@@ -49,29 +49,12 @@ public class Navigator extends JFrame {
     public void iniciarComponentes() {
         Platform.setImplicitExit(false);
 
-        cookieStore = new MyCookieStore();
-
-        try {
-            URL url = new URL("http://10.60.2.246:8888/serversso/login");
-
-            File e = new File(FICHERO_NOMBRE);
-            if (!e.exists()) {
-                URLConnection conn = url.openConnection();
-                conn.connect();
-                cookieStore.storeCookies(conn);
-//                System.out.println(cookieStore);
-            }
-            cookieStore.setCookies(url.openConnection());
-        } catch (IOException ioe) {
-            LOG.info("Liada: ".concat(ioe.getMessage()));
-        }
-
         javaFxPanel = new JFXPanel();
         estadoLabel = new JLabel();
 
         JPanel panelTodo = new JPanel(new BorderLayout());
         JButton botonBuscar = new JButton("Buscar");
-        direccion = new JTextField();
+        direccion = new JTextField("http://10.60.2.246:8888/serversso/login");
         barraProgreso = new JProgressBar();
 
         crearEscena();
@@ -111,6 +94,24 @@ public class Navigator extends JFrame {
     }
 
     private void crearEscena() {
+        
+        cookieStore = new MyCookieStore();
+
+        try {
+            URL url = new URL(direccion.getText());
+
+            File e = new File(FICHERO_NOMBRE);
+            if (!e.exists()) {
+                URLConnection conn = url.openConnection();
+                conn.connect();
+                cookieStore.storeCookies(conn);
+//                System.out.println(cookieStore);
+            }
+            cookieStore.setCookies(url.openConnection());
+        } catch (IOException ioe) {
+            LOG.info("Liada: ".concat(ioe.getMessage()));
+        }
+        
 
         Platform.runLater(() -> {
             view = new WebView();
@@ -134,15 +135,16 @@ public class Navigator extends JFrame {
                     SwingUtilities.invokeLater(new Runnable() {
                         @Override
                         public void run() {
+                            MyCookieStore cm = new MyCookieStore();
                             try {
-                                System.out.println("----------------------------------------");
                                 URL url = new URL(direccion.getText());
                                 URLConnection conn = url.openConnection();
-                                cookieStore.storeCookies(conn);
-                                System.out.println(cookieStore);
-                                cookieStore.setCookies(url.openConnection());
+                                conn.connect();
+                                cm.storeCookies(conn);
+                                System.out.println(cm);
+                                cm.setCookies(url.openConnection());
                             } catch (IOException ioe) {
-                                LOG.info("Liada: ".concat(ioe.getMessage()));
+                                LOG.info("Hubo un error: ".concat(ioe.getMessage()));
                             }
 
 //                            Collection<List<String>> cookiesHeader = connection.getHeaderFields().values();

@@ -58,12 +58,10 @@ public class MyCookieStore {
     private static final char NAME_VALUE_SEPARATOR = '=';
     private static final char DOT = '.';
 
-    private DateFormat dateFormat;
-
     public MyCookieStore() {
 
-        store = new HashMap();
-        dateFormat = new SimpleDateFormat(DATE_FORMAT);
+        store = new HashMap<>();
+        
     }
 
     /**
@@ -82,12 +80,12 @@ public class MyCookieStore {
         // let's determine the domain from where these cookies are being sent
         String domain = getDomainFromHost(conn.getURL().getHost());
 
-        Map<String, Map> domainStore; // this is where we will store cookies for this domain
+        Map<String,HashMap<String,String>> domainStore; // this is where we will store cookies for this domain
 
         // now let's check the store to see if we have an entry for this domain
         if (store.containsKey(domain)) {
             // we do, so lets retrieve it from the store
-            domainStore = (Map<String, Map>) store.get(domain);
+            domainStore = (Map<String,HashMap<String,String>>) store.get(domain);
         } else {
             // we don't, so let's create it and put it in the store
             domainStore = leerCookies();
@@ -98,7 +96,7 @@ public class MyCookieStore {
         String headerName = null;
         for (int i = 1; (headerName = conn.getHeaderFieldKey(i)) != null; i++) {
             if (headerName.equalsIgnoreCase(SET_COOKIE)) {
-                Map cookie = new HashMap();
+                HashMap<String,String> cookie = new HashMap<>();
                 StringTokenizer st = new StringTokenizer(conn.getHeaderField(i), COOKIE_VALUE_DELIMITER);
 
                 // the specification dictates that the first name/value pair
@@ -147,12 +145,12 @@ public class MyCookieStore {
         String domain = getDomainFromHost(url.getHost());
         String path = url.getPath();
 
-        Map domainStore;
+        Map<String,HashMap<String,String>> domainStore;
 
         if (existeFichero()) {
-            domainStore = (Map) leerCookies().get(domain);
+            domainStore = (Map<String,HashMap<String,String>>) leerCookies().get(domain);
         } else {
-            domainStore = (Map) store.get(domain);
+            domainStore = (Map<String,HashMap<String,String>>) store.get(domain);
         }
 
         if (domainStore == null) {
@@ -160,16 +158,17 @@ public class MyCookieStore {
         }
         StringBuilder cookieStringBuffer = new StringBuilder();
 
-        Iterator cookieNames = domainStore.keySet().iterator();
+        Iterator<String> cookieNames = domainStore.keySet().iterator();
         while (cookieNames.hasNext()) {
-            String cookieName = (String) cookieNames.next();
-            Map cookie = (Map) domainStore.get(cookieName);
+            String cookieName = cookieNames.next();
+            Map<String,String> cookie;
+            cookie = (Map<String,String>) domainStore.get(cookieName);
             // check cookie to ensure path matches  and cookie is not expired
             // if all is cool, add cookie to header string 
-            if (comparePaths((String) cookie.get(PATH), path) && isNotExpired((String) cookie.get(EXPIRES))) {
+            if (comparePaths(cookie.get(PATH), path) && isNotExpired(cookie.get(EXPIRES))) {
                 cookieStringBuffer.append(cookieName);
                 cookieStringBuffer.append("=");
-                cookieStringBuffer.append((String) cookie.get(cookieName));
+                cookieStringBuffer.append(cookie.get(cookieName));
                 if (cookieNames.hasNext()) {
                     cookieStringBuffer.append(SET_COOKIE_SEPARATOR);
                 }
@@ -197,6 +196,7 @@ public class MyCookieStore {
             return true;
         }
         Date now = new Date();
+        DateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT);
         try {
             return (now.compareTo(dateFormat.parse(cookieExpires))) <= 0;
         } catch (java.text.ParseException pe) {
@@ -241,7 +241,7 @@ public class MyCookieStore {
         }
     }
 
-    private void guardarCookies(Map mapaGuardar) {
+    private void guardarCookies(Map<String,HashMap<String,String>> mapaGuardar) {
 
         if (!existeFichero()) {
             try (FileOutputStream fos = new FileOutputStream(FICHERO_NOMBRE, false);
